@@ -1,0 +1,48 @@
+# 🧵 ThreadSocial API .htaccess Configuration
+
+# Disable directory browsing for security
+Options -Indexes
+
+# CORS Configuration
+<IfModule mod_headers.c>
+    Header always set Access-Control-Allow-Origin "*"
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, X-User-ID"
+</IfModule>
+
+# Handle OPTIONS Preflight
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^(.*)$ $1 [R=200,L]
+
+# Prevent access to sensitive files
+<FilesMatch "^\.">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Enable Rewrite Engine
+RewriteEngine On
+
+# 1. Ensure Authorization Header is passed to PHP
+# This is crucial for JWT tokens on many Apache configurations
+RewriteCond %{HTTP:Authorization} ^(.*)
+RewriteRule .* - [e=HTTP_AUTHORIZATION:%1]
+
+# 2. Redirect /api/index.php to /api/ (Optional)
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /.*index\.php\ HTTP/
+RewriteRule ^(.*)index\.php$ /$1 [R=301,L]
+
+# 3. Handle Preflight OPTIONS requests (Optional - already in PHP config)
+# If you face CORS issues, uncomment the lines below
+# RewriteCond %{REQUEST_METHOD} OPTIONS
+# RewriteRule ^(.*)$ $1 [R=200,L]
+
+# 4. Limit file upload size if needed (Adjust based on your needs)
+# php_value upload_max_filesize 10M
+# php_value post_max_size 10M
+
+# 5. Optional: Clean URLs (remove .php)
+# If you want to use /api/auth/login instead of /api/auth/login.php
+# RewriteCond %{REQUEST_FILENAME} !-d
+# RewriteCond %{REQUEST_FILENAME}\.php -f
+# RewriteRule ^(.*)$ $1.php [NC,L]
