@@ -11,9 +11,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 
 // Database configuration
 $host = "localhost";
-$db_name = "bere9277_db_naufal";
-$username = "bere9277_user_naufal";
-$password = "naufal123";
+$db_name = "";
+$username = "";
+$password = "";
 $conn = null;
 
 try {
