@@ -5,7 +5,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/custom_textfield.dart';
-import 'main_navigation_page.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -89,6 +88,12 @@ class _RegisterPageState extends State<RegisterPage> {
                 label: "Email",
                 icon: Icons.email_outlined,
                 keyboardType: TextInputType.emailAddress,
+                validator: (value) {
+                  if (value == null || !value.endsWith('@gmail.com')) {
+                    return "Email must end with @gmail.com";
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
               CustomTextField(
@@ -96,6 +101,17 @@ class _RegisterPageState extends State<RegisterPage> {
                 label: "Password",
                 icon: Icons.lock_outline,
                 isPassword: true,
+                validator: (value) {
+                  if (value == null || value.length < 8) {
+                    return "Password must be at least 8 characters long";
+                  }
+                  if (!RegExp(
+                    r'^(?=.*[a-zA-Z])(?=.*[0-9])(?=.*[!@#\$&*~]).{8,}$',
+                  ).hasMatch(value)) {
+                    return "Password must contain letters, numbers, and special characters";
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
               CustomTextField(
@@ -122,18 +138,22 @@ class _RegisterPageState extends State<RegisterPage> {
                               );
 
                               if (success && context.mounted) {
-                                Navigator.pushAndRemoveUntil(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const MainNavigationPage(),
-                                  ),
-                                  (route) => false,
-                                );
-                              } else if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text(
-                                      "Registration failed. Please try again.",
+                                      "Registration successful! Please login.",
+                                    ),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                                Navigator.pop(context);
+                              } else if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      auth.errorMessage.isNotEmpty
+                                          ? auth.errorMessage
+                                          : "Registration failed. Please try again.",
                                     ),
                                     backgroundColor: Colors.red,
                                   ),

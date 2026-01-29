@@ -8,11 +8,13 @@ class AuthProvider extends ChangeNotifier {
   final ApiService _apiService = ApiService();
   UserModel? _user;
   bool _isLoading = false;
+  String _errorMessage = '';
   String _cacheBuster = DateTime.now().millisecondsSinceEpoch.toString();
 
   UserModel? get user => _user;
   bool get isLoading => _isLoading;
   bool get isAuthenticated => _user != null;
+  String get errorMessage => _errorMessage;
   String get cacheBuster => _cacheBuster;
 
   Future<void> init() async {
@@ -77,6 +79,7 @@ class AuthProvider extends ChangeNotifier {
     XFile? profileImage,
   }) async {
     _isLoading = true;
+    _errorMessage = '';
     notifyListeners();
 
     try {
@@ -85,25 +88,34 @@ class AuthProvider extends ChangeNotifier {
         imageName = await _apiService.uploadImage(profileImage, 'profiles');
       }
 
-      var response = await _apiService.post('/auth/register.php', {
+      var body = {
         'username': username,
         'email': email,
         'password': password,
-        'full_name': fullName,
-        'bio': bio,
-        'profile_image': imageName,
-      });
+        'full_name': fullName ?? '',
+        'bio': bio ?? '',
+        'profile_image': imageName ?? '',
+      };
+
+      var response = await _apiService.post('/auth/register.php', body);
 
       if (response.statusCode == 201) {
-        var data = jsonDecode(response.body);
-        await _apiService.saveToken(data['token']);
-        _user = UserModel.fromJson(data['user']);
-        await _apiService.saveUserId(_user!.id.toString());
         _isLoading = false;
         notifyListeners();
         return true;
+      } else {
+        try {
+          var data = jsonDecode(response.body);
+          _errorMessage =
+              data['error'] ?? data['message'] ?? "Registration failed";
+        } catch (e) {
+          _errorMessage = "Server error: ${response.statusCode}";
+        }
+        debugPrint("Registration failed: ${response.statusCode}");
+        debugPrint("Error body: ${response.body}");
       }
     } catch (e) {
+      _errorMessage = "An error occurred: $e";
       debugPrint("Register error: $e");
     }
 

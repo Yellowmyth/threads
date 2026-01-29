@@ -6,6 +6,8 @@ import '../providers/thread_provider.dart';
 import '../providers/auth_provider.dart';
 import '../utils/constants.dart';
 import '../pages/profile_page.dart';
+import '../pages/login_page.dart';
+import 'comment_sheet.dart';
 
 class ThreadCard extends StatelessWidget {
   final ThreadModel thread;
@@ -140,8 +142,17 @@ class ThreadCard extends StatelessWidget {
                 icon: thread.isLiked ? Icons.favorite : Icons.favorite_border,
                 color: thread.isLiked ? Colors.red : AppColors.textSecondary,
                 label: thread.likesCount.toString(),
-                onTap: () =>
-                    context.read<ThreadProvider>().toggleLike(thread.id),
+                onTap: () {
+                  if (auth.user == null) {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (_) => const LoginPage()),
+                      (route) => false,
+                    );
+                    return;
+                  }
+                  context.read<ThreadProvider>().toggleLike(thread.id);
+                },
               ),
               const SizedBox(width: 24),
               _ActionButton(
@@ -149,7 +160,12 @@ class ThreadCard extends StatelessWidget {
                 color: AppColors.textSecondary,
                 label: thread.commentsCount.toString(),
                 onTap: () {
-                  // TODO: Navigate to comments
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (context) => CommentSheet(thread: thread),
+                  );
                 },
               ),
             ],

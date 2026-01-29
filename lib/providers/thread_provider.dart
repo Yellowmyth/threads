@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import '../models/thread_model.dart';
+import '../models/comment_model.dart';
 import '../services/api_service.dart';
 
 class ThreadProvider extends ChangeNotifier {
@@ -103,23 +104,88 @@ class ThreadProvider extends ChangeNotifier {
   }
 
   Future<void> toggleLike(int threadId) async {
+    int index = _threads.indexWhere((t) => t.id == threadId);
+    if (index == -1) return;
+
+    // Optimistic update
+    final originalIsLiked = _threads[index].isLiked;
+    final originalLikesCount = _threads[index].likesCount;
+
+    _threads[index].isLiked = !originalIsLiked;
+    _threads[index].likesCount += _threads[index].isLiked ? 1 : -1;
+    notifyListeners();
+
     try {
       var response = await _apiService.post(
         '/threads/like.php',
         {},
         params: {'id': threadId.toString()},
       );
+
       if (response.statusCode == 200) {
         var data = jsonDecode(response.body);
-        int index = _threads.indexWhere((t) => t.id == threadId);
-        if (index != -1) {
-          _threads[index].isLiked = !_threads[index].isLiked;
-          _threads[index].likesCount = data['likes_count'];
+        // Sync with actual count from server
+        if (data['likes_count'] != null) {
+          _threads[index].likesCount =
+              int.tryParse(data['likes_count'].toString()) ??
+              _threads[index].likesCount;
           notifyListeners();
         }
+      } else {
+        // Revert on failure
+        _threads[index].isLiked = originalIsLiked;
+        _threads[index].likesCount = originalLikesCount;
+        notifyListeners();
+        debugPrint(
+          "Like failed with status: ${response.statusCode}. Body: ${response.body}",
+        );
       }
     } catch (e) {
+      // Revert on error
+      _threads[index].isLiked = originalIsLiked;
+      _threads[index].likesCount = originalLikesCount;
+      notifyListeners();
       debugPrint("Error liking thread: $e");
     }
+  }
+
+  Future<List<CommentModel>> fetchComments(int threadId) async {
+    try {
+      var response = await _apiService.get(
+        '/threads/comments.php',
+        params: {'id': threadId.toString()},
+      );
+
+      if (response.statusCode == 200) {
+        List<dynamic> data = jsonDecode(response.body);
+        return data.map((e) => CommentModel.fromJson(e)).toList();
+      }
+    } catch (e) {
+      debugPrint("Error fetching comments: $e");
+    }
+    return [];
+  }
+
+  Future<bool> addComment(int threadId, String content) async {
+    try {
+      var response = await _apiService.post(
+        '/threads/comment.php',
+        {'content': content},
+        params: {'id': threadId.toString()},
+      );
+
+      if (response.statusCode == 201) {
+        // Update local comment count
+        int index = _threads.indexWhere((t) => t.id == threadId);
+        if (index != -1) {
+          _threads[index].commentsCount++;
+          notifyListeners();
+        }
+        return true;
+      }
+    } catch (e) {
+      debugPrint("Error adding comment: $e");
+    }
+    return false;
   }
 }

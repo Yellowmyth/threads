@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'threads_page.dart';
+import 'explore_page.dart';
 import 'create_thread_page.dart';
 import 'profile_page.dart';
 import '../providers/auth_provider.dart';
 import '../providers/thread_provider.dart';
 import '../providers/profile_provider.dart';
 import '../utils/constants.dart';
+import '../widgets/guest_view.dart';
+import 'login_page.dart';
 
 class MainNavigationPage extends StatefulWidget {
   const MainNavigationPage({super.key});
@@ -24,6 +27,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
 
     final List<Widget> pages = [
       const ThreadsPage(),
+      const ExplorePage(),
       const SizedBox(), // Placeholder for the middle button action
       if (user != null)
         ProfilePage(
@@ -31,7 +35,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
           userId: user.id.toString(),
         )
       else
-        const Center(child: Text("Login required")),
+        const GuestView(),
     ];
 
     return WillPopScope(
@@ -46,13 +50,22 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
       },
       child: Scaffold(
         body: IndexedStack(
-          index: _currentIndex == 1
+          index: _currentIndex == 2
               ? 0
-              : _currentIndex, // Keep Home visible if Create is clicked
+              : _currentIndex, // Keep Home/Explore visible if Create is clicked
           children: pages,
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: () async {
+            if (context.read<AuthProvider>().user == null) {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginPage()),
+                (route) => false,
+              );
+              return;
+            }
+
             bool? refreshNeeded = await Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const CreateThreadPage()),
@@ -89,7 +102,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
                   icon: Icon(
                     _currentIndex == 0 ? Icons.home : Icons.home_outlined,
                     color: _currentIndex == 0 ? AppColors.primary : Colors.grey,
-                    size: 30,
+                    size: 28,
                   ),
                   onPressed: () {
                     setState(() {
@@ -97,16 +110,28 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
                     });
                   },
                 ),
-                const SizedBox(width: 40), // Space for FAB
                 IconButton(
                   icon: Icon(
-                    _currentIndex == 2 ? Icons.person : Icons.person_outline,
-                    color: _currentIndex == 2 ? AppColors.primary : Colors.grey,
-                    size: 30,
+                    _currentIndex == 1 ? Icons.explore : Icons.explore_outlined,
+                    color: _currentIndex == 1 ? AppColors.primary : Colors.grey,
+                    size: 28,
                   ),
                   onPressed: () {
                     setState(() {
-                      _currentIndex = 2;
+                      _currentIndex = 1;
+                    });
+                  },
+                ),
+                const SizedBox(width: 40), // Space for FAB
+                IconButton(
+                  icon: Icon(
+                    _currentIndex == 3 ? Icons.person : Icons.person_outline,
+                    color: _currentIndex == 3 ? AppColors.primary : Colors.grey,
+                    size: 28,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _currentIndex = 3;
                     });
                   },
                 ),
